@@ -1,7 +1,7 @@
 {
   "name": "request-queue",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "dist/index.js",
   "repository": "git@github.com:zpbc007/request-queue.git",
   "author": "zhaopeng <719197352@qq.com>",
   "license": "MIT",
