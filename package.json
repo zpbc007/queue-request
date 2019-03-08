@@ -1,0 +1,40 @@
+{
+  "name": "request-queue",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "git@github.com:zpbc007/request-queue.git",
+  "author": "zhaopeng <719197352@qq.com>",
+  "license": "MIT",
+  "scripts": {
+    "format": "prettier --write \"src/**/*.{js,ts}\"",
+    "lint:fix": "tslint -c tslint.json \"src/**/*.{ts,tsx}\" --fix"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged",
+      "commit-msg": "commitlint -E HUSKY_GIT_PARAMS"
+    }
+  },
+  "lint-staged": {
+    "{src,test}/*.{js,ts}": [
+      "npm run format",
+      "npm run lint:fix",
+      "git add"
+    ]
+  },
+  "commitlint": {
+    "extends": [
+      "@commitlint/config-conventional"
+    ]
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^7.5.2",
+    "@commitlint/config-conventional": "^7.5.0",
+    "husky": "^1.3.1",
+    "lint-staged": "^8.1.5",
+    "prettier": "^1.16.4",
+    "rollup": "^1.6.0",
+    "tslint": "^5.13.1",
+    "typescript": "^3.3.3333"
+  }
+}
