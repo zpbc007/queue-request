@@ -18,7 +18,7 @@
   "rules": {
     "prettier": true,
     "quotemark": [true, "single", "jsx-double"],
-    "arrow-parens": [true, "ban-single-arg-parens"],
+    "arrow-parens": [true],
     "semicolon": [true, "never"],
     "no-console": false,
     "no-debugger": false,

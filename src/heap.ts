@@ -8,7 +8,7 @@ class MinHeap<T = any> {
     private compare: Comparator
     private heapContainer: T[] = []
 
-    constructor(compareFun: ICompare<T>, private nonEmptyCb?: () => void) {
+    constructor(compareFun: ICompare<T>) {
         this.compare = new Comparator(compareFun)
     }
 
@@ -21,9 +21,6 @@ class MinHeap<T = any> {
      */
     push(item: T) {
         this.heapContainer.push(item)
-        if (this.nonEmptyCb) {
-            this.nonEmptyCb()
-        }
         return this.upAdjust()
     }
 
@@ -45,9 +42,6 @@ class MinHeap<T = any> {
         this.heapContainer[0] = this.heapContainer.pop() as T
         this.downAdjust()
 
-        if (!this.isEmpty && this.nonEmptyCb) {
-            this.nonEmptyCb()
-        }
         return result as T
     }
 
@@ -141,7 +135,7 @@ class MinHeap<T = any> {
 
         while (
             parentIndex >= 0 && // 未到定点
-            this.compare.lessThan(this.heapContainer[childIndex], this.parent(parentIndex)) // 小于父级节点
+            this.compare.lessThan(this.heapContainer[childIndex], this.heapContainer[parentIndex]) // 小于父级节点
         ) {
             // 单向赋值
             this.heapContainer[childIndex] = this.heapContainer[parentIndex]

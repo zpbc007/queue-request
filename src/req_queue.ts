@@ -1,4 +1,4 @@
-import axios, { AxiosRequestConfig } from 'axios'
+import axios, { AxiosRequestConfig, AxiosPromise } from 'axios'
 import { MinHeap } from './heap'
 
 interface IQueueItem {
@@ -17,25 +17,31 @@ class ReqQueue {
     private proMap: any = {}
 
     constructor(private readonly maxReq: number) {
-        this.heap = new MinHeap(this.compareFunc, this.sendReq)
+        this.heap = new MinHeap(this.compareFunc)
     }
 
     /** 添加请求 */
-    addReq(config: IQueueItem) {
+    addReq<T = any>(config: IQueueItem) {
         const id = Symbol()
+        // 先创建promise
+        const pro = new Promise((resolve, reject) => {
+            this.proMap[id] = {
+                resolve,
+                reject,
+            }
+        }) as AxiosPromise<T>
+
+        // 放入队列中
         this.heap.push({
             ...config,
             id,
         })
 
+        this.sendReq()
+
         return {
             id,
-            pro: new Promise((resolve, reject) => {
-                this.proMap[id] = {
-                    resolve,
-                    reject,
-                }
-            }),
+            pro,
         }
     }
 
@@ -47,7 +53,7 @@ class ReqQueue {
     }
 
     /** 发送请求 */
-    private async sendReq() {
+    private sendReq = async () => {
         if (this.heap.isEmpty()) {
             return
         }
@@ -59,11 +65,15 @@ class ReqQueue {
         const { value, id } = this.heap.shift() as IInnerQueueItem
         const { resolve, reject } = this.proMap[id]
         try {
+            this.reqNum++
             const res = await axios(value)
 
             resolve(res)
         } catch (e) {
             reject(e)
+        } finally {
+            this.reqNum--
+            this.sendReq()
         }
     }
 
