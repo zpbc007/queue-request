@@ -28,6 +28,7 @@
     "ordered-imports": false,
     "member-access": false,
     "curly": [true, "ignore-same-line"],
-    "interface-name": [true, "always-prefix"]
+    "interface-name": [true, "always-prefix"],
+    "no-unused-expression": [true, "allow-fast-null-checks"]
   }
 }

@@ -16,56 +16,67 @@ test('can send request', async () => {
 })
 
 test('send in order', async () => {
-    const queue = new ReqQueue(1)
+    const url = 'https://www.baidu.com/'
+    const queue = new ReqQueue(2)
     const resultArr: string[] = []
-    const expectArr = ['baiduPro', 'sohuPro', 'qqPro', 'sinaPro']
+    const expectArr = ['baiduPro3', 'baiduPro2', 'baiduPro1', 'baiduPro11', 'baiduPro4']
 
-    const { pro: baiduPro } = queue.addReq({
+    const { pro: baiduPro3 } = queue.addReq({
         priority: 3,
+        beforeSend: () => {
+            resultArr.push('baiduPro3')
+        },
         value: {
             method: 'get',
-            url: 'https://www.baidu.com/',
+            url,
         },
     })
 
-    const { pro: sinaPro } = queue.addReq({
+    const { pro: baiduPro2 } = queue.addReq({
         priority: 2,
+        beforeSend: () => {
+            resultArr.push('baiduPro2')
+        },
         value: {
             method: 'get',
-            url: 'https://www.sina.com.cn/',
+            url,
         },
     })
 
-    const { pro: sohuPro } = queue.addReq({
+    const { pro: baiduPro4 } = queue.addReq({
+        priority: 4,
+        beforeSend: () => {
+            resultArr.push('baiduPro4')
+        },
+        value: {
+            method: 'get',
+            url,
+        },
+    })
+
+    const { pro: baiduPro1 } = queue.addReq({
         priority: 1,
+        beforeSend: () => {
+            resultArr.push('baiduPro1')
+        },
         value: {
             method: 'get',
-            url: 'http://www.sohu.com/',
+            url,
         },
     })
 
-    const { pro: qqPro } = queue.addReq({
+    const { pro: baiduPro11 } = queue.addReq({
         priority: 1,
+        beforeSend: () => {
+            resultArr.push('baiduPro11')
+        },
         value: {
             method: 'get',
-            url: 'https://www.qq.com/',
+            url,
         },
     })
 
-    baiduPro.then(() => {
-        resultArr.push('baiduPro')
-    })
-    sinaPro.then(() => {
-        resultArr.push('sinaPro')
-    })
-    sohuPro.then(() => {
-        resultArr.push('sohuPro')
-    })
-    qqPro.then(() => {
-        resultArr.push('qqPro')
-    })
-
-    await Promise.all([baiduPro, sinaPro, sohuPro, qqPro])
+    await Promise.all([baiduPro3, baiduPro2, baiduPro4, baiduPro1, baiduPro11])
 
     expect(resultArr).toEqual(expectArr)
 })

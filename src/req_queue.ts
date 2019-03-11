@@ -2,7 +2,11 @@ import axios, { AxiosRequestConfig, AxiosPromise } from 'axios'
 import { MinHeap } from './heap'
 
 interface IQueueItem {
+    // 优先级
     priority?: number
+    // 发送前回调 测试用
+    beforeSend?: (config: AxiosRequestConfig) => void
+    // axios 配置
     value: AxiosRequestConfig
 }
 
@@ -54,17 +58,21 @@ class ReqQueue {
 
     /** 发送请求 */
     private sendReq = async () => {
+        // 队列为空
         if (this.heap.isEmpty()) {
             return
         }
 
+        // 当前发送请求已经到达最大值
         if (this.reqNum >= this.maxReq) {
             return
         }
 
-        const { value, id } = this.heap.shift() as IInnerQueueItem
+        const { value, id, beforeSend } = this.heap.shift() as IInnerQueueItem
         const { resolve, reject } = this.proMap[id]
         try {
+            // 发送前钩子
+            beforeSend && beforeSend(value)
             this.reqNum++
             const res = await axios(value)
 
