@@ -28,6 +28,6 @@
     "ordered-imports": false,
     "member-access": false,
     "curly": [true, "ignore-same-line"],
-    "interface-name": [true, "never-prefix"]
+    "interface-name": [true, "always-prefix"]
   }
 }
