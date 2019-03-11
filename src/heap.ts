@@ -1,13 +1,14 @@
 import { Comparator, CompareResult } from '@utils/comparator'
 
 type ICompare<T> = (a: T, b: T) => CompareResult
+type IDelFuncArg<T> = (item: T, index: number) => boolean
 
 /** 最小堆 */
 class MinHeap<T = any> {
     private compare: Comparator
     private heapContainer: T[] = []
 
-    constructor(compareFun: ICompare<T>) {
+    constructor(compareFun: ICompare<T>, private nonEmptyCb?: () => void) {
         this.compare = new Comparator(compareFun)
     }
 
@@ -20,8 +21,10 @@ class MinHeap<T = any> {
      */
     push(item: T) {
         this.heapContainer.push(item)
-        this.upAdjust()
-        return this
+        if (this.nonEmptyCb) {
+            this.nonEmptyCb()
+        }
+        return this.upAdjust()
     }
 
     /**
@@ -33,7 +36,7 @@ class MinHeap<T = any> {
         }
 
         if (this.heapContainer.length === 1) {
-            return this.heapContainer.pop()
+            return this.heapContainer.pop() as T
         }
 
         const result = this.heapContainer[0]
@@ -41,29 +44,65 @@ class MinHeap<T = any> {
         // 将最后面的元素放入头结点
         this.heapContainer[0] = this.heapContainer.pop() as T
         this.downAdjust()
-        return result
+
+        if (!this.isEmpty && this.nonEmptyCb) {
+            this.nonEmptyCb()
+        }
+        return result as T
     }
 
     /**
      * 删除指定元素
+     * @param {number} target 根据index删除 返回元素
+     * @param {T} target 根据item删除 返回index
      */
-    remove(item: T) {
-        const index = this.heapContainer.indexOf(item)
+    remove(target: number): T
+    remove(target: T): number
+    remove(target: IDelFuncArg<T>): T[]
+    remove(target: T | number | IDelFuncArg<T>) {
+        const targetIndexArr: number[] = []
+        const isNumber = Number.isInteger(target as number)
+        const isFun = typeof target === 'function'
 
-        if (index === -1) {
+        // 获取index
+        if (isNumber) {
+            targetIndexArr.push(target as number)
+        } else if (isFun) {
+            this.heapContainer.forEach((item, index) => {
+                if ((target as IDelFuncArg<T>)(item, index)) {
+                    targetIndexArr.push(index)
+                }
+            })
+        } else {
+            targetIndexArr.push(this.heapContainer.indexOf(target as T))
+        }
+
+        if (targetIndexArr.length === 0) {
             return
         }
 
-        this.heapContainer[index] = this.heapContainer.pop() as T
-        const parent = this.parent(index)
-        const leftChild = this.leftChild(index)
-        if (
-            leftChild !== null && // 有子节点
-            (!parent || this.compare.lessThan(parent, this.heapContainer[index])) // 没有父节点 或者父节点小于后来的节点
-        ) {
-            this.downAdjust(index)
+        const resultArr = []
+        for (const targetIndex of targetIndexArr) {
+            resultArr.push(this.heapContainer[targetIndex])
+            this.heapContainer[targetIndex] = this.heapContainer.pop() as T
+            const parent = this.parent(targetIndex)
+            const leftChild = this.leftChild(targetIndex)
+            if (
+                leftChild !== null && // 有子节点
+                (!parent || this.compare.lessThan(parent, this.heapContainer[targetIndex])) // 没有父节点 或者父节点小于后来的节点
+            ) {
+                this.downAdjust(targetIndex)
+            } else {
+                this.upAdjust(targetIndex)
+            }
+        }
+
+        if (isNumber) {
+            return resultArr[0]
+        } else if (isFun) {
+            return resultArr
         } else {
-            this.upAdjust(index)
+            return targetIndexArr[0]
         }
     }
 
@@ -110,6 +149,8 @@ class MinHeap<T = any> {
             parentIndex = this.getParentIndex(parentIndex)
         }
         this.heapContainer[childIndex] = temp
+
+        return childIndex
     }
 
     /**
@@ -147,6 +188,8 @@ class MinHeap<T = any> {
         }
 
         this.heapContainer[parentIndex] = temp
+
+        return parentIndex
     }
 }
 
