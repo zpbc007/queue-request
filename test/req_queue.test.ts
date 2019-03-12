@@ -84,7 +84,7 @@ describe('test req_queue', () => {
     })
 
     it('should cancel req', async () => {
-        const queue = new ReqQueue(1)
+        const queue = new ReqQueue(2)
         const resolveArr: string[] = []
         const rejectArr: string[] = []
         const sendArr: string[] = []
@@ -121,6 +121,18 @@ describe('test req_queue', () => {
                 method: 'get',
                 url,
                 params: { id: 4 },
+            },
+        })
+
+        const { pro: pro5 } = queue.addReq({
+            priority: 5,
+            beforeSend: () => {
+                sendArr.push('pro5')
+            },
+            value: {
+                method: 'get',
+                url,
+                params: { id: 5 },
             },
         })
 
@@ -167,6 +179,11 @@ describe('test req_queue', () => {
         }).catch(() => {
             rejectArr.push('pro4')
         })
+        pro5.then(() => {
+            resolveArr.push('pro5')
+        }).catch(() => {
+            rejectArr.push('pro5')
+        })
         pro1.then(() => {
             resolveArr.push('pro1')
         }).catch(() => {
@@ -181,11 +198,12 @@ describe('test req_queue', () => {
             })
 
         try {
-            await Promise.all([pro3, pro2, pro4, pro1, pro11].map(reflect))
+            await Promise.all([pro3, pro2, pro4, pro1, pro11, pro5].map(reflect))
         } finally {
-            expect(resolveArr).toEqual(['pro1', 'pro2'])
+            // 返回顺序不可测
+            expect(resolveArr.sort()).toEqual(['pro2', 'pro5', 'pro1'].sort())
             expect(rejectArr).toEqual(['pro4', 'pro11', 'pro3'])
-            expect(sendArr).toEqual(['pro3', 'pro1', 'pro2'])
+            expect(sendArr).toEqual(['pro3', 'pro2', 'pro1', 'pro5'])
         }
     })
 })
