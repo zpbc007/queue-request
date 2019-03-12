@@ -1,11 +1,22 @@
 {
-  "name": "request-queue",
-  "version": "1.0.0",
+  "name": "@hinata_hyuga/request-queue",
+  "version": "1.0.3",
   "main": "dist/index.js",
+  "types": "./dist/index.d.ts",
   "module": "dist/index.es.js",
-  "repository": "git@github.com:zpbc007/request-queue.git",
   "author": "zhaopeng <719197352@qq.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/zpbc007/request-queue.git"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "license": "MIT",
+  "files": [
+    "dist/**/*"
+  ],
   "scripts": {
     "clean:dist": "rimraf dist/*",
     "min": "terser dist/index.js -o dist/index.min.js",
@@ -55,5 +66,17 @@
   "peerDependencies": {
     "axios": "^0.18.0"
   },
-  "dependencies": {}
+  "dependencies": {},
+  "description": "## 目标",
+  "bugs": {
+    "url": "https://github.com/zpbc007/request-queue/issues"
+  },
+  "homepage": "https://github.com/zpbc007/request-queue#readme",
+  "directories": {
+    "test": "test"
+  },
+  "keywords": [
+    "queue",
+    "request"
+  ]
 }
