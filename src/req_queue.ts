@@ -1,6 +1,6 @@
 import axios, { AxiosPromise } from 'axios'
 import { MinHeap } from './heap'
-import { IInnerQueueItem, IQueueItem, ICacheItem } from 'type'
+import { IInnerQueueItem, IQueueItem, ICacheItem } from './type'
 
 class ReqQueue {
     private heap: MinHeap<IInnerQueueItem>
