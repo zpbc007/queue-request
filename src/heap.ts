@@ -1,7 +1,7 @@
 import { Comparator, CompareResult } from '@utils/comparator'
 
 type ICompare<T> = (a: T, b: T) => CompareResult
-type IDelFuncArg<T> = (item: T, index: number) => boolean
+type IFindFunc<T> = (item: T, index: number) => boolean
 
 /** 最小堆 */
 class MinHeap<T = any> {
@@ -14,6 +14,21 @@ class MinHeap<T = any> {
 
     isEmpty() {
         return this.heapContainer.length === 0
+    }
+
+    /**
+     * 查找满足条件的元素
+     */
+    find(func: IFindFunc<T>) {
+        const result: T[] = []
+
+        this.heapContainer.forEach((item, index) => {
+            if (func(item, index)) {
+                result.push(item)
+            }
+        })
+
+        return result
     }
 
     /**
@@ -47,56 +62,58 @@ class MinHeap<T = any> {
 
     /**
      * 删除指定元素
-     * @param {number} target 根据index删除 返回元素
      * @param {T} target 根据item删除 返回index
      */
-    remove(target: number): T
-    remove(target: T): number
-    remove(target: IDelFuncArg<T>): T[]
-    remove(target: T | number | IDelFuncArg<T>) {
-        const targetIndexArr: number[] = []
-        const isNumber = Number.isInteger(target as number)
+    remove(target: T): T
+    remove(target: IFindFunc<T>): T[]
+    remove(target: T | IFindFunc<T>) {
         const isFun = typeof target === 'function'
 
-        // 获取index
-        if (isNumber) {
-            targetIndexArr.push(target as number)
-        } else if (isFun) {
-            this.heapContainer.forEach((item, index) => {
-                if ((target as IDelFuncArg<T>)(item, index)) {
-                    targetIndexArr.push(index)
-                }
-            })
+        if (isFun) {
+            return this.removeByFunc(target as IFindFunc<T>)
         } else {
-            targetIndexArr.push(this.heapContainer.indexOf(target as T))
+            return this.removeByItem(target as T)
         }
+    }
 
-        if (targetIndexArr.length === 0) {
+    private removeByItem(item: T) {
+        const targetIndex = this.heapContainer.indexOf(item)
+        if (targetIndex === -1) {
             return
         }
+        const reuslt = this.heapContainer[targetIndex]
+        this.removeByIndex(targetIndex)
 
-        const resultArr = []
-        for (const targetIndex of targetIndexArr) {
-            resultArr.push(this.heapContainer[targetIndex])
-            this.heapContainer[targetIndex] = this.heapContainer.pop() as T
-            const parent = this.parent(targetIndex)
-            const leftChild = this.leftChild(targetIndex)
-            if (
-                leftChild !== null && // 有子节点
-                (!parent || this.compare.lessThan(parent, this.heapContainer[targetIndex])) // 没有父节点 或者父节点小于后来的节点
-            ) {
-                this.downAdjust(targetIndex)
-            } else {
-                this.upAdjust(targetIndex)
-            }
+        return reuslt
+    }
+
+    private removeByFunc(func: IFindFunc<T>) {
+        const removeItemArr = this.find(func)
+        const result: T[] = []
+
+        for (const item of removeItemArr) {
+            result.push(this.removeByItem(item) as T)
         }
 
-        if (isNumber) {
-            return resultArr[0]
-        } else if (isFun) {
-            return resultArr
+        return result
+    }
+
+    private removeByIndex(targetIndex: number) {
+        // 最后一个元素直接删除
+        if (targetIndex === this.heapContainer.length - 1) {
+            this.heapContainer.pop()
+            return
+        }
+        this.heapContainer[targetIndex] = this.heapContainer.pop() as T
+        const parent = this.parent(targetIndex)
+        const leftChild = this.leftChild(targetIndex)
+        if (
+            leftChild !== null && // 有子节点
+            (!parent || this.compare.lessThan(parent, this.heapContainer[targetIndex])) // 没有父节点 或者父节点小于后来的节点
+        ) {
+            this.downAdjust(targetIndex)
         } else {
-            return targetIndexArr[0]
+            this.upAdjust(targetIndex)
         }
     }
 
