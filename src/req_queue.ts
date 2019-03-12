@@ -1,24 +1,12 @@
-import axios, { AxiosRequestConfig, AxiosPromise } from 'axios'
+import axios, { AxiosPromise } from 'axios'
 import { MinHeap } from './heap'
-
-interface IQueueItem {
-    // 优先级
-    priority?: number
-    // 发送前回调 测试用
-    beforeSend?: (config: AxiosRequestConfig) => void
-    // axios 配置
-    value: AxiosRequestConfig
-}
-
-interface IInnerQueueItem extends IQueueItem {
-    id: symbol
-}
+import { IInnerQueueItem, IQueueItem, ICacheItem } from 'type'
 
 class ReqQueue {
     private heap: MinHeap<IInnerQueueItem>
     /** 当前请求数量 */
     private reqNum = 0
-    private proMap: any = {}
+    private cache: any = {}
 
     constructor(private readonly maxReq: number) {
         this.heap = new MinHeap(this.compareFunc)
@@ -26,21 +14,37 @@ class ReqQueue {
 
     /** 添加请求 */
     addReq<T = any>(config: IQueueItem) {
+        // 本次请求唯一id
         const id = Symbol()
-        // 先创建promise
+        const cacheItem: ICacheItem = {} as any
+
+        // 创建promise
         const pro = new Promise((resolve, reject) => {
-            this.proMap[id] = {
+            cacheItem.promise = {
                 resolve,
                 reject,
             }
         }) as AxiosPromise<T>
 
+        // 创建cancel token
+        const cancelToken = new axios.CancelToken((cancel) => {
+            cacheItem.canceler = cancel
+        })
+
+        // 保存缓存
+        this.cache[id] = cacheItem
+
         // 放入队列中
         this.heap.push({
             ...config,
+            value: {
+                ...config.value,
+                cancelToken,
+            },
             id,
         })
 
+        // 发请求
         this.sendReq()
 
         return {
@@ -51,9 +55,28 @@ class ReqQueue {
 
     /** 删除请求 */
     delReq(targetId: symbol) {
-        return this.heap.remove(({ id }) => {
+        const delResult = this.heap.remove(({ id }) => {
             return id === targetId
         })
+
+        // 不在队列中
+        if (delResult.length === 0) {
+            // 从缓存中获取
+            if (this.cache.hasOwnProperty(targetId)) {
+                const cacheItem = this.cache[targetId] as ICacheItem
+                // 取消请求
+                cacheItem.canceler()
+                // resolve 置空
+                delete cacheItem.promise.resolve
+            } else {
+                console.warn(`该请求不存在 或者请求已经发送完毕`)
+            }
+        } else {
+            const cacheItem = this.cache[targetId] as ICacheItem
+            cacheItem.promise.reject('cancel request')
+            // 清空缓存
+            this.clearCacheById(targetId)
+        }
     }
 
     /** 发送请求 */
@@ -69,20 +92,31 @@ class ReqQueue {
         }
 
         const { value, id, beforeSend } = this.heap.shift() as IInnerQueueItem
-        const { resolve, reject } = this.proMap[id]
         try {
-            // 发送前钩子
-            beforeSend && beforeSend(value)
+            const { resolve } = (this.cache[id] as ICacheItem).promise
             this.reqNum++
-            const res = await axios(value)
-
-            resolve(res)
+            if (resolve) {
+                beforeSend && beforeSend(value)
+                // 发送前钩子
+                const res = await axios(value)
+                resolve(res)
+            } else {
+                throw new Error('请求被取消')
+            }
         } catch (e) {
+            const { reject } = (this.cache[id] as ICacheItem).promise
+
             reject(e)
         } finally {
             this.reqNum--
+            this.clearCacheById(id)
+
             this.sendReq()
         }
+    }
+
+    private clearCacheById(id: symbol) {
+        delete this.cache[id]
     }
 
     private compareFunc(
