@@ -6,7 +6,10 @@ class ReqQueue {
     private heap: MinHeap<IInnerQueueItem>
     /** 当前请求数量 */
     private reqNum = 0
+    /** 缓存 */
     private cache: any = {}
+    /** 暂停flag */
+    private isPause = false
 
     constructor(private readonly maxReq: number) {
         this.heap = new MinHeap(this.compareFunc)
@@ -79,8 +82,34 @@ class ReqQueue {
         }
     }
 
+    /** 暂停队列 */
+    pause() {
+        if (this.isPause) {
+            console.warn(`queue in pause state, can not pause`)
+            return
+        }
+
+        this.isPause = true
+    }
+
+    /** 恢复队列 */
+    resume() {
+        if (!this.isPause) {
+            console.warn(`queue is in start state, can not resume`)
+            return
+        }
+
+        this.isPause = false
+        this.sendReq()
+    }
+
     /** 发送请求 */
     private sendReq = async () => {
+        // 队列处于暂停状态
+        if (this.isPause) {
+            return
+        }
+
         // 队列为空
         if (this.heap.isEmpty()) {
             return

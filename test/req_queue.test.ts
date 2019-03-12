@@ -206,4 +206,45 @@ describe('test req_queue', () => {
             expect(sendArr).toEqual(['pro3', 'pro2', 'pro1', 'pro5'])
         }
     })
+
+    it('should pause queue', async () => {
+        const queue = new ReqQueue(2)
+        const sendArr: string[] = []
+
+        const { pro: pro1 } = queue.addReq({
+            priority: 1,
+            beforeSend: () => {
+                sendArr.push('pro1')
+            },
+            value: {
+                method: 'get',
+                url,
+            },
+        })
+        const { pro: pro2 } = queue.addReq({
+            priority: 1,
+            beforeSend: () => {
+                sendArr.push('pro2')
+            },
+            value: {
+                method: 'get',
+                url,
+            },
+        })
+        const { pro: pro3 } = queue.addReq({
+            priority: 1,
+            beforeSend: () => {
+                sendArr.push('pro3')
+            },
+            value: {
+                method: 'get',
+                url,
+            },
+        })
+
+        queue.pause()
+        queue.resume()
+        await Promise.all([pro1, pro2, pro3])
+        expect(sendArr).toEqual(['pro1', 'pro2', 'pro3'])
+    })
 })
