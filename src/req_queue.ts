@@ -1,10 +1,9 @@
-import axios, { AxiosPromise } from 'axios'
 import { MinHeap } from './heap'
-import { IInnerQueueItem, IQueueItem, ICacheItem } from './type'
+import { IInnerQueueConfig, IQueueConfig, ICacheItem } from './type'
 
-class ReqQueue {
-    private heap: MinHeap<IInnerQueueItem>
-    /** 当前请求数量 */
+class AsyncQueue {
+    private heap: MinHeap<IInnerQueueConfig>
+    /** 当前执行数量 */
     private reqNum = 0
     /** 缓存 */
     private cache: any = {}
@@ -15,11 +14,13 @@ class ReqQueue {
         this.heap = new MinHeap(this.compareFunc)
     }
 
-    /** 添加请求 */
-    addReq<T = any>(config: IQueueItem) {
-        // 本次请求唯一id
+    /** 添加 */
+    add<T>(func: () => Promise<T>, { onCancel, ...config }: IQueueConfig = {}) {
+        // 唯一id
         const id = Symbol()
-        const cacheItem: ICacheItem = {} as any
+        const cacheItem: ICacheItem = {
+            canceler: onCancel,
+        } as any
 
         // 创建promise
         const pro = new Promise((resolve, reject) => {
@@ -27,11 +28,6 @@ class ReqQueue {
                 resolve,
                 reject,
             }
-        }) as AxiosPromise<T>
-
-        // 创建cancel token
-        const cancelToken = new axios.CancelToken((cancel) => {
-            cacheItem.canceler = cancel
         })
 
         // 保存缓存
@@ -40,15 +36,12 @@ class ReqQueue {
         // 放入队列中
         this.heap.push({
             ...config,
-            value: {
-                ...config.value,
-                cancelToken,
-            },
             id,
+            func,
         })
 
         // 发请求
-        this.sendReq()
+        this.exec()
 
         return {
             id,
@@ -57,7 +50,7 @@ class ReqQueue {
     }
 
     /** 删除请求 */
-    delReq(targetId: symbol) {
+    del(targetId: symbol) {
         const delResult = this.heap.remove(({ id }) => {
             return id === targetId
         })
@@ -67,8 +60,7 @@ class ReqQueue {
             // 从缓存中获取
             if (this.cache.hasOwnProperty(targetId)) {
                 const cacheItem = this.cache[targetId] as ICacheItem
-                // 取消请求
-                cacheItem.canceler()
+                cacheItem.canceler && cacheItem.canceler()
                 // resolve 置空
                 delete cacheItem.promise.resolve
             } else {
@@ -100,11 +92,11 @@ class ReqQueue {
         }
 
         this.isPause = false
-        this.sendReq()
+        this.exec()
     }
 
     /** 发送请求 */
-    private sendReq = async () => {
+    private exec = async () => {
         // 队列处于暂停状态
         if (this.isPause) {
             return
@@ -120,18 +112,14 @@ class ReqQueue {
             return
         }
 
-        const { value, id, beforeSend } = this.heap.shift() as IInnerQueueItem
+        const { id, before, func } = this.heap.shift() as IInnerQueueConfig
         try {
-            const { resolve } = (this.cache[id] as ICacheItem).promise
             this.reqNum++
-            if (resolve) {
-                beforeSend && beforeSend(value)
-                // 发送前钩子
-                const res = await axios(value)
-                resolve(res)
-            } else {
-                throw new Error('请求被取消')
-            }
+            this.getResolve(id)
+            // 发送前钩子
+            before && before()
+            const res = await func()
+            this.getResolve(id)(res)
         } catch (e) {
             const { reject } = (this.cache[id] as ICacheItem).promise
 
@@ -140,7 +128,7 @@ class ReqQueue {
             this.reqNum--
             this.clearCacheById(id)
 
-            this.sendReq()
+            this.exec()
         }
     }
 
@@ -149,8 +137,8 @@ class ReqQueue {
     }
 
     private compareFunc(
-        { priority: pa = 0 }: IInnerQueueItem,
-        { priority: pb = 0 }: IInnerQueueItem
+        { priority: pa = 0 }: IInnerQueueConfig,
+        { priority: pb = 0 }: IInnerQueueConfig
     ) {
         if (pa > pb) {
             return 1
@@ -160,6 +148,15 @@ class ReqQueue {
             return 0
         }
     }
+
+    private getResolve(id: symbol) {
+        const { resolve } = (this.cache[id] as ICacheItem).promise
+        if (!resolve) {
+            throw new Error('请求被取消')
+        }
+
+        return resolve
+    }
 }
 
-export { ReqQueue, IQueueItem }
+export { AsyncQueue }

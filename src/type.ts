@@ -1,16 +1,17 @@
-import { AxiosRequestConfig, Canceler } from 'axios'
-
-interface IQueueItem {
+interface IQueueConfig {
     // 优先级
     priority?: number
-    // 发送前回调 测试用
-    beforeSend?: (config: AxiosRequestConfig) => void
-    // axios 配置
-    value: AxiosRequestConfig
+    // 执行前回调 测试用
+    before?: () => void
+    // 取消时回调
+    onCancel?: () => void
 }
 
-interface IInnerQueueItem extends IQueueItem {
+interface IInnerQueueConfig<T = any> extends IQueueConfig {
+    // 唯一id
     id: symbol
+    // 异步函数
+    func: () => Promise<T>
 }
 
 interface ICacheItem {
@@ -19,7 +20,7 @@ interface ICacheItem {
         resolve?: (arg: any) => void
         reject: (arg: any) => void
     }
-    canceler: Canceler
+    canceler?: () => void
 }
 
-export { IQueueItem, IInnerQueueItem, ICacheItem }
+export { IQueueConfig, IInnerQueueConfig, ICacheItem }

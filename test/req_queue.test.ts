@@ -1,168 +1,119 @@
-import { ReqQueue } from '../src/index'
+import { AsyncQueue } from '../src/index'
 import { reflect } from '../src/utils/promise'
 
-const url = 'https://www.baidu.com/'
 describe('test req_queue', () => {
-    it('should send request', async () => {
-        const queue = new ReqQueue(4)
+    const asyncFunc = (time = Math.random() * 500) => {
+        return new Promise((resolve) => {
+            setTimeout(() => resolve('finish'), time)
+        })
+    }
 
-        const { pro } = queue.addReq({
+    it('should exec func', async () => {
+        const queue = new AsyncQueue(4)
+
+        const { pro } = queue.add(asyncFunc, {
             priority: 2,
-            value: {
-                method: 'get',
-                url,
-            },
         })
 
         const res = await pro
         expect(res)
     })
 
-    it('should send req in order', async () => {
-        const queue = new ReqQueue(2)
+    it('should exec func in order', async () => {
+        const queue = new AsyncQueue(2)
         const resultArr: string[] = []
-        const expectArr = ['baiduPro3', 'baiduPro2', 'baiduPro1', 'baiduPro11', 'baiduPro4']
+        const expectArr = ['pro3', 'pro2', 'pro1', 'pro11', 'pro4']
 
-        const { pro: baiduPro3 } = queue.addReq({
+        const { pro: pro3 } = queue.add(asyncFunc, {
             priority: 3,
-            beforeSend: () => {
-                resultArr.push('baiduPro3')
-            },
-            value: {
-                method: 'get',
-                url,
+            before: () => {
+                resultArr.push('pro3')
             },
         })
 
-        const { pro: baiduPro2 } = queue.addReq({
+        const { pro: pro2 } = queue.add(asyncFunc, {
             priority: 2,
-            beforeSend: () => {
-                resultArr.push('baiduPro2')
-            },
-            value: {
-                method: 'get',
-                url,
+            before: () => {
+                resultArr.push('pro2')
             },
         })
 
-        const { pro: baiduPro4 } = queue.addReq({
+        const { pro: pro4 } = queue.add(asyncFunc, {
             priority: 4,
-            beforeSend: () => {
-                resultArr.push('baiduPro4')
-            },
-            value: {
-                method: 'get',
-                url,
+            before: () => {
+                resultArr.push('pro4')
             },
         })
 
-        const { pro: baiduPro1 } = queue.addReq({
+        const { pro: pro1 } = queue.add(asyncFunc, {
             priority: 1,
-            beforeSend: () => {
-                resultArr.push('baiduPro1')
-            },
-            value: {
-                method: 'get',
-                url,
+            before: () => {
+                resultArr.push('pro1')
             },
         })
 
-        const { pro: baiduPro11 } = queue.addReq({
+        const { pro: pro11 } = queue.add(asyncFunc, {
             priority: 1,
-            beforeSend: () => {
-                resultArr.push('baiduPro11')
-            },
-            value: {
-                method: 'get',
-                url,
+            before: () => {
+                resultArr.push('pro11')
             },
         })
 
-        await Promise.all([baiduPro3, baiduPro2, baiduPro4, baiduPro1, baiduPro11])
+        await Promise.all([pro3, pro2, pro4, pro1, pro11])
 
         expect(resultArr).toEqual(expectArr)
     })
 
     it('should cancel req', async () => {
-        const queue = new ReqQueue(2)
+        const queue = new AsyncQueue(2)
         const resolveArr: string[] = []
         const rejectArr: string[] = []
         const sendArr: string[] = []
-        const { pro: pro3, id: id3 } = queue.addReq({
+        const { pro: pro3, id: id3 } = queue.add(asyncFunc, {
             priority: 3,
-            beforeSend: () => {
+            before: () => {
                 sendArr.push('pro3')
             },
-            value: {
-                method: 'get',
-                url,
-                params: { id: 3 },
-            },
         })
 
-        const { pro: pro2 } = queue.addReq({
+        const { pro: pro2 } = queue.add(asyncFunc, {
             priority: 2,
-            beforeSend: () => {
+            before: () => {
                 sendArr.push('pro2')
             },
-            value: {
-                method: 'get',
-                url,
-                params: { id: 2 },
-            },
         })
 
-        const { pro: pro4, id: id4 } = queue.addReq({
+        const { pro: pro4, id: id4 } = queue.add(asyncFunc, {
             priority: 4,
-            beforeSend: () => {
+            before: () => {
                 sendArr.push('pro4')
             },
-            value: {
-                method: 'get',
-                url,
-                params: { id: 4 },
-            },
         })
 
-        const { pro: pro5 } = queue.addReq({
+        const { pro: pro5 } = queue.add(asyncFunc, {
             priority: 5,
-            beforeSend: () => {
+            before: () => {
                 sendArr.push('pro5')
             },
-            value: {
-                method: 'get',
-                url,
-                params: { id: 5 },
-            },
         })
 
-        const { pro: pro1 } = queue.addReq({
+        const { pro: pro1 } = queue.add(asyncFunc, {
             priority: 1,
-            beforeSend: () => {
+            before: () => {
                 sendArr.push('pro1')
             },
-            value: {
-                method: 'get',
-                url,
-                params: { id: 1 },
-            },
         })
 
-        const { pro: pro11, id: id11 } = queue.addReq({
+        const { pro: pro11, id: id11 } = queue.add(asyncFunc, {
             priority: 1,
-            beforeSend: () => {
+            before: () => {
                 sendArr.push('pro11')
             },
-            value: {
-                method: 'get',
-                url,
-                params: { id: 11 },
-            },
         })
 
-        queue.delReq(id3)
-        queue.delReq(id4)
-        queue.delReq(id11)
+        queue.del(id3)
+        queue.del(id4)
+        queue.del(id11)
 
         pro3.then(() => {
             resolveArr.push('pro3')
@@ -208,37 +159,25 @@ describe('test req_queue', () => {
     })
 
     it('should pause queue', async () => {
-        const queue = new ReqQueue(2)
+        const queue = new AsyncQueue(2)
         const sendArr: string[] = []
 
-        const { pro: pro1 } = queue.addReq({
+        const { pro: pro1 } = queue.add(asyncFunc, {
             priority: 1,
-            beforeSend: () => {
+            before: () => {
                 sendArr.push('pro1')
             },
-            value: {
-                method: 'get',
-                url,
-            },
         })
-        const { pro: pro2 } = queue.addReq({
+        const { pro: pro2 } = queue.add(asyncFunc, {
             priority: 1,
-            beforeSend: () => {
+            before: () => {
                 sendArr.push('pro2')
             },
-            value: {
-                method: 'get',
-                url,
-            },
         })
-        const { pro: pro3 } = queue.addReq({
+        const { pro: pro3 } = queue.add(asyncFunc, {
             priority: 1,
-            beforeSend: () => {
+            before: () => {
                 sendArr.push('pro3')
-            },
-            value: {
-                method: 'get',
-                url,
             },
         })
 
