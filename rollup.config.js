@@ -18,7 +18,6 @@ export default {
       sourcemap: true,
     },
   ],
-  external: ['axios'],
   plugins: [
     typescript({
       rollupCommonJSResolveHack: true,
